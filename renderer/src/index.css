@@ -1,17 +1,48 @@
 @import "tailwindcss";
 
-:root {
-  --bg: #0e0e0f;
-  --bg-raised: #161618;
-  --bg-overlay: #1e1e21;
-  --border: #2a2a2e;
-  --accent: #e8ff47;
-  --accent-dim: #c8df27;
-  --text-primary: #f0f0f0;
+:root[data-theme="dark"] {
+  --bg:             #0e0e0f;
+  --bg-raised:      #161618;
+  --bg-overlay:     #1e1e21;
+  --border:         #2a2a2e;
+  --accent:         #00b4d8;
+  --accent-dim:     #0096b4;
+  --accent-glow:    rgba(0, 180, 216, 0.15);
+  --text-primary:   #f0f0f0;
   --text-secondary: #888890;
-  --text-dim: #444450;
-  --font-display: 'Syne', sans-serif;
-  --font-mono: 'DM Mono', monospace;
+  --text-dim:       #444450;
+  --font-display:   'Syne', sans-serif;
+  --font-mono:      'DM Mono', monospace;
+}
+
+:root[data-theme="navy"] {
+  --bg:             #0a0f14;
+  --bg-raised:      #0f1923;
+  --bg-overlay:     #162130;
+  --border:         #1e3448;
+  --accent:         #00b4d8;
+  --accent-dim:     #0096b4;
+  --accent-glow:    rgba(0, 180, 216, 0.15);
+  --text-primary:   #e8f4f8;
+  --text-secondary: #7eb8cc;
+  --text-dim:       #2e5470;
+  --font-display:   'Syne', sans-serif;
+  --font-mono:      'DM Mono', monospace;
+}
+
+:root[data-theme="light"] {
+  --bg:             #f0f7fa;
+  --bg-raised:      #ffffff;
+  --bg-overlay:     #e1f0f5;
+  --border:         #b8dde8;
+  --accent:         #0077a8;
+  --accent-dim:     #005f8a;
+  --accent-glow:    rgba(0, 119, 168, 0.12);
+  --text-primary:   #0a1f2e;
+  --text-secondary: #1a5068;
+  --text-dim:       #7aadbe;
+  --font-display:   'Syne', sans-serif;
+  --font-mono:      'DM Mono', monospace;
 }
 
 * {
@@ -32,19 +63,10 @@ body {
   font-family: var(--font-display);
   -webkit-font-smoothing: antialiased;
   user-select: none;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 4px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 2px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-dim);
-}
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }

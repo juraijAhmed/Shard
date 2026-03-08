@@ -1,7 +1,25 @@
 import { useState, useEffect } from "react";
 
 // Custom titlebar — replaces native frame
+function useTheme() {
+  const [theme, setTheme] = useState('dark')
 
+  function applyTheme(t) {
+    setTheme(t)
+    document.documentElement.setAttribute('data-theme', t)
+    window.shard.setSetting('theme', t)
+  }
+
+  useEffect(() => {
+    window.shard.getSetting('theme').then((saved) => {
+      const t = saved || 'dark'
+      setTheme(t)
+      document.documentElement.setAttribute('data-theme', t)
+    })
+  }, [])
+
+  return { theme, applyTheme }
+}
 function highlight(text, query) {
   if (!text || !query) return text;
   const parts = text.split(new RegExp(`(${query})`, "gi"));
@@ -52,107 +70,74 @@ function extractUrlsFromText(text) {
 
   return [...found];
 }
-function TitleBar() {
+function TitleBar({ theme, onToggleTheme }) {
   return (
     <div
       className="flex items-center justify-between px-4 h-10 shrink-0"
       style={{
-        background: "var(--bg)",
-        borderBottom: "1px solid var(--border)",
-        WebkitAppRegion: "drag", // makes the bar draggable
+        background: 'var(--bg)',
+        borderBottom: '1px solid var(--border)',
+        WebkitAppRegion: 'drag',
       }}
     >
       {/* Logo */}
-      <div
-        className="flex items-center gap-2"
-        style={{ WebkitAppRegion: "no-drag" }}
-      >
-        <span
-          style={{
-            fontFamily: "var(--font-display)",
-            fontWeight: 700,
-            fontSize: "15px",
-            letterSpacing: "0.08em",
-            color: "var(--accent)",
-          }}
-        >
-          <img src="logo.png"/>
-        </span>
+      <div style={{ WebkitAppRegion: 'no-drag' }}>
+        <img
+          src="/logo.png"
+          alt="Shard"
+          style={{ height: '24px', width: 'auto', display: 'block' }}
+        />
       </div>
 
-      {/* Window controls */}
-      <div
-        className="flex items-center gap-1"
-        style={{ WebkitAppRegion: "no-drag" }}
-      >
+      {/* Right side controls */}
+      <div className="flex items-center gap-1" style={{ WebkitAppRegion: 'no-drag' }}>
+
+        {/* Theme toggle */}
+        <button
+          onClick={onToggleTheme}
+          className="w-7 h-7 rounded flex items-center justify-center transition-colors"
+          style={{ color: 'var(--text-dim)', fontSize: '13px' }}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-overlay)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          title={theme === 'dark' ? 'Switch to Navy' : theme === 'navy' ? 'Switch to Light' : 'Switch to Dark'}
+        >
+          {theme === 'light' ? '☽' : '☀'}
+        </button>
+
+        {/* Window controls */}
         <button
           onClick={() => window.shard?.minimize()}
           className="w-7 h-7 rounded flex items-center justify-center transition-colors"
-          style={{ color: "var(--text-dim)" }}
-          onMouseEnter={(e) =>
-            (e.target.style.background = "var(--bg-overlay)")
-          }
-          onMouseLeave={(e) => (e.target.style.background = "transparent")}
-          title="Minimize"
+          style={{ color: 'var(--text-dim)' }}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-overlay)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         >
-          <svg width="10" height="1" viewBox="0 0 10 1" fill="currentColor">
-            <rect width="10" height="1" />
-          </svg>
+          <svg width="10" height="1" viewBox="0 0 10 1" fill="currentColor"><rect width="10" height="1" /></svg>
         </button>
         <button
           onClick={() => window.shard?.maximize()}
           className="w-7 h-7 rounded flex items-center justify-center transition-colors"
-          style={{ color: "var(--text-dim)" }}
-          onMouseEnter={(e) =>
-            (e.target.style.background = "var(--bg-overlay)")
-          }
-          onMouseLeave={(e) => (e.target.style.background = "transparent")}
-          title="Maximize"
+          style={{ color: 'var(--text-dim)' }}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-overlay)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         >
-          <svg
-            width="9"
-            height="9"
-            viewBox="0 0 9 9"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1"
-          >
-            <rect x="0.5" y="0.5" width="8" height="8" />
-          </svg>
+          <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" strokeWidth="1"><rect x="0.5" y="0.5" width="8" height="8" /></svg>
         </button>
         <button
           onClick={() => window.shard?.close()}
           className="w-7 h-7 rounded flex items-center justify-center transition-colors"
-          style={{ color: "var(--text-dim)" }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#c0392b";
-            e.currentTarget.style.color = "white";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.color = "var(--text-dim)";
-          }}
-          title="Close"
+          style={{ color: 'var(--text-dim)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#c0392b'; e.currentTarget.style.color = 'white' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-dim)' }}
         >
-          <svg
-            width="9"
-            height="9"
-            viewBox="0 0 9 9"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.2"
-          >
-            <line x1="0" y1="0" x2="9" y2="9" />
-            <line x1="9" y1="0" x2="0" y2="9" />
-          </svg>
+          <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" strokeWidth="1.2"><line x1="0" y1="0" x2="9" y2="9" /><line x1="9" y1="0" x2="0" y2="9" /></svg>
         </button>
       </div>
     </div>
-  );
+  )
 }
-
 function ScreenshotModal({ screenshot, onClose }) {
-  const [copiedUrl, setCopiedUrl] = useState(null)
+  const [copiedUrl, setCopiedUrl] = useState(null);
   if (!screenshot) return null;
 
   return (
@@ -352,7 +337,7 @@ function ScreenshotModal({ screenshot, onClose }) {
                       }}
                       title={url}
                     >
-                      {copiedUrl === url ? '✓ Copied' : url}
+                      {copiedUrl === url ? "✓ Copied" : url}
                     </button>
                   ))}
                 </div>
@@ -437,96 +422,145 @@ function Sidebar({ activeView, setActiveView }) {
 
 // Placeholder views
 function GalleryView() {
-  const [screenshots, setScreenshots] = useState([])
-  const [selected, setSelected] = useState(null)
+  const [screenshots, setScreenshots] = useState([]);
+  const [selected, setSelected] = useState(null);
 
   useEffect(() => {
-    window.shard.getAll().then(setScreenshots)
+    window.shard.getAll().then(setScreenshots);
 
     window.shard.onScreenshotAdded((data) => {
-      setScreenshots((prev) => [data, ...prev])
-    })
+      setScreenshots((prev) => [data, ...prev]);
+    });
 
     window.shard.onScreenshotOcrDone(({ filepath, ocrText }) => {
       setScreenshots((prev) =>
-        prev.map((s) => s.filepath === filepath ? { ...s, ocr_text: ocrText } : s)
-      )
-    })
-  }, [])
+        prev.map((s) =>
+          s.filepath === filepath ? { ...s, ocr_text: ocrText } : s,
+        ),
+      );
+    });
+  }, []);
 
   // Group screenshots by date
   const grouped = screenshots.reduce((acc, s) => {
-    const date = new Date(s.timestamp)
-    const key = date.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-    if (!acc[key]) acc[key] = []
-    acc[key].push(s)
-    return acc
-  }, {})
+    const date = new Date(s.timestamp);
+    const key = date.toLocaleDateString("en-GB", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(s);
+    return acc;
+  }, {});
 
   if (screenshots.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3">
-        <div style={{ fontSize: '48px', opacity: 0.2 }}>⊞</div>
-        <p style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-display)', fontSize: '14px' }}>
+        <div style={{ fontSize: "48px", opacity: 0.2 }}>⊞</div>
+        <p
+          style={{
+            color: "var(--text-secondary)",
+            fontFamily: "var(--font-display)",
+            fontSize: "14px",
+          }}
+        >
           No screenshots yet
         </p>
-        <p style={{ color: 'var(--text-dim)', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
+        <p
+          style={{
+            color: "var(--text-dim)",
+            fontFamily: "var(--font-mono)",
+            fontSize: "11px",
+          }}
+        >
           Set a watch folder in Settings to get started
         </p>
       </div>
-    )
+    );
   }
 
   return (
     <div className="relative h-full overflow-hidden">
-      <ScreenshotModal screenshot={selected} onClose={() => setSelected(null)} />
+      <ScreenshotModal
+        screenshot={selected}
+        onClose={() => setSelected(null)}
+      />
       <div className="h-full overflow-y-auto p-4">
         {Object.entries(grouped).map(([date, items]) => (
           <div key={date} className="mb-6">
             {/* Date header */}
             <div
               className="flex items-center gap-3 mb-3"
-              style={{ position: 'sticky', top: 0, zIndex: 10, paddingTop: '4px', paddingBottom: '8px', background: 'var(--bg-raised)' }}
+              style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 10,
+                paddingTop: "4px",
+                paddingBottom: "8px",
+                background: "var(--bg-raised)",
+              }}
             >
-              <p style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '11px',
-                color: 'var(--accent)',
-                letterSpacing: '0.05em',
-                whiteSpace: 'nowrap',
-              }}>
+              <p
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "11px",
+                  color: "var(--accent)",
+                  letterSpacing: "0.05em",
+                  whiteSpace: "nowrap",
+                }}
+              >
                 {date}
               </p>
-              <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
-              <p style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '10px',
-                color: 'var(--text-dim)',
-                whiteSpace: 'nowrap',
-              }}>
-                {items.length} screenshot{items.length !== 1 ? 's' : ''}
+              <div
+                style={{ flex: 1, height: "1px", background: "var(--border)" }}
+              />
+              <p
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "10px",
+                  color: "var(--text-dim)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {items.length} screenshot{items.length !== 1 ? "s" : ""}
               </p>
             </div>
 
             {/* Grid for this date */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+                gap: "10px",
+              }}
+            >
               {items.map((s) => (
                 <div
                   key={s.filepath}
                   onClick={() => setSelected(s)}
                   className="rounded-lg overflow-hidden cursor-pointer transition-all"
                   style={{
-                    border: '2px solid var(--border)',
-                    background: 'var(--bg-overlay)',
-                    aspectRatio: '16/10',
+                    border: "2px solid var(--border)",
+                    background: "var(--bg-overlay)",
+                    aspectRatio: "16/10",
                   }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.borderColor = "var(--accent)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.borderColor = "var(--border)")
+                  }
                 >
                   <img
                     src={`file://${s.filepath}`}
                     alt={s.filename}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
                   />
                 </div>
               ))}
@@ -535,7 +569,7 @@ function GalleryView() {
         ))}
       </div>
     </div>
-  )
+  );
 }
 function SearchView() {
   const [query, setQuery] = useState("");
@@ -715,113 +749,127 @@ function SearchView() {
     </div>
   );
 }
-function SettingsView() {
-  const [folder, setFolder] = useState("");
+function SettingsView({ applyTheme, currentTheme }) {
+  const [folder, setFolder] = useState('')
 
-  // Load saved folder on mount
   useEffect(() => {
-    window.shard.getSetting("watchFolder").then((val) => {
-      if (val) setFolder(val);
-    });
-  }, []);
+    window.shard.getSetting('watchFolder').then((val) => {
+      if (val) setFolder(val)
+    })
+  }, [])
 
   async function handleBrowse() {
-    const picked = await window.shard.pickFolder();
-    if (!picked) return;
-    setFolder(picked);
-    await window.shard.setSetting("watchFolder", picked);
+    const picked = await window.shard.pickFolder()
+    if (!picked) return
+    setFolder(picked)
+    await window.shard.setSetting('watchFolder', picked)
   }
 
+  const themes = [
+    { id: 'dark',  label: 'Dark',  description: 'Black with teal accents' },
+    { id: 'navy',  label: 'Navy',  description: 'Deep blue with teal accents' },
+    { id: 'light', label: 'Light', description: 'Clean ice blue' },
+  ]
+
   return (
-    <div className="flex flex-col p-8 gap-6 h-full">
+    <div className="flex flex-col p-8 gap-6 h-full overflow-y-auto">
       <div>
-        <h2
-          style={{
-            fontFamily: "var(--font-display)",
-            fontWeight: 600,
-            fontSize: "18px",
-            color: "var(--text-primary)",
-          }}
-        >
+        <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '18px', color: 'var(--text-primary)' }}>
           Settings
         </h2>
-        <p
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: "11px",
-            color: "var(--text-dim)",
-            marginTop: "4px",
-          }}
-        >
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-dim)', marginTop: '4px' }}>
           Configure Shard
         </p>
       </div>
 
-      <div
-        className="rounded-lg p-4"
-        style={{
-          border: "1px solid var(--border)",
-          background: "var(--bg-raised)",
-        }}
-      >
-        <p
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "13px",
-            color: "var(--text-secondary)",
-            marginBottom: "8px",
-          }}
-        >
+      {/* Watch folder */}
+      <div className="rounded-lg p-4" style={{ border: '1px solid var(--border)', background: 'var(--bg-raised)' }}>
+        <p style={{ fontFamily: 'var(--font-display)', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
           Watch Folder
         </p>
         <div className="flex items-center gap-3">
           <div
             className="flex-1 rounded px-3 py-2"
             style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "12px",
-              color: folder ? "var(--text-primary)" : "var(--text-dim)",
-              background: "var(--bg-overlay)",
-              border: "1px solid var(--border)",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
+              fontFamily: 'var(--font-mono)',
+              fontSize: '12px',
+              color: folder ? 'var(--text-primary)' : 'var(--text-dim)',
+              background: 'var(--bg-overlay)',
+              border: '1px solid var(--border)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
           >
-            {folder || "Not set"}
+            {folder || 'Not set'}
           </div>
           <button
             onClick={handleBrowse}
-            className="px-3 py-2 rounded text-sm font-medium transition-opacity hover:opacity-80"
+            className="px-3 py-2 rounded transition-opacity hover:opacity-80"
             style={{
-              background: "var(--accent)",
-              color: "#0e0e0f",
-              fontFamily: "var(--font-display)",
-              fontSize: "12px",
+              background: 'var(--accent)',
+              color: '#fff',
+              fontFamily: 'var(--font-display)',
+              fontSize: '12px',
               fontWeight: 600,
-              whiteSpace: "nowrap",
+              whiteSpace: 'nowrap',
             }}
           >
             Browse
           </button>
         </div>
         {folder && (
-          <p
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "11px",
-              color: "var(--text-dim)",
-              marginTop: "8px",
-            }}
-          >
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-dim)', marginTop: '8px' }}>
             ✓ Watching for new screenshots
           </p>
         )}
       </div>
-    </div>
-  );
-}
 
+      {/* Theme selector */}
+      <div className="rounded-lg p-4" style={{ border: '1px solid var(--border)', background: 'var(--bg-raised)' }}>
+        <p style={{ fontFamily: 'var(--font-display)', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+          Theme
+        </p>
+        <div className="flex flex-col gap-2">
+          {themes.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => applyTheme(t.id)}
+              className="flex items-center gap-3 rounded-lg px-3 py-3 transition-all text-left"
+              style={{
+                border: currentTheme === t.id ? '1px solid var(--accent)' : '1px solid var(--border)',
+                background: currentTheme === t.id ? 'var(--accent-glow)' : 'var(--bg-overlay)',
+                cursor: 'pointer',
+              }}
+            >
+              {/* Colour swatch */}
+              <div style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '6px',
+                flexShrink: 0,
+                background: t.id === 'dark' ? '#0e0e0f' : t.id === 'navy' ? '#0a0f14' : '#f0f7fa',
+                border: '2px solid',
+                borderColor: t.id === 'light' ? '#b8dde8' : '#00b4d8',
+              }} />
+              <div>
+                <p style={{ fontFamily: 'var(--font-display)', fontSize: '13px', color: 'var(--text-primary)', fontWeight: currentTheme === t.id ? 600 : 400 }}>
+                  {t.label}
+                </p>
+                <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-dim)' }}>
+                  {t.description}
+                </p>
+              </div>
+              {currentTheme === t.id && (
+                <div style={{ marginLeft: 'auto', color: 'var(--accent)', fontSize: '14px' }}>✓</div>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 const views = {
   gallery: GalleryView,
   search: SearchView,
@@ -829,21 +877,22 @@ const views = {
 };
 
 export default function App() {
-  const [activeView, setActiveView] = useState("gallery");
-  const ActiveView = views[activeView];
+  const [activeView, setActiveView] = useState('gallery')
+  const { theme, applyTheme } = useTheme()
+  const ActiveView = views[activeView]
 
   return (
     <div className="flex flex-col h-full">
-      <TitleBar />
+      <TitleBar theme={theme} onToggleTheme={() => {
+        const next = theme === 'dark' ? 'navy' : theme === 'navy' ? 'light' : 'dark'
+        applyTheme(next)
+      }} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar activeView={activeView} setActiveView={setActiveView} />
-        <main
-          className="flex-1 overflow-hidden"
-          style={{ background: "var(--bg-raised)" }}
-        >
-          <ActiveView />
+        <main className="flex-1 overflow-hidden" style={{ background: 'var(--bg-raised)' }}>
+          <ActiveView applyTheme={applyTheme} currentTheme={theme} />
         </main>
       </div>
     </div>
-  );
+  )
 }
