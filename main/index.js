@@ -4,7 +4,6 @@ if (process.env.NODE_ENV !== 'production') {
     hardResetMethod: 'exit',
   })
 }
-
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, dialog } = require('electron')
 const path = require('path')
 const { getSetting, setSetting, getAllScreenshots, searchScreenshots } = require('./db')
@@ -93,6 +92,11 @@ ipcMain.handle('dialog:pickFolder', async () => {
 })
 
 app.whenReady().then(async () => {
+    const { session } = require('electron')
+  session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    callback({ requestHeaders: details.requestHeaders })
+  })
+  
   createWindow()
   createTray()
   initWorker().catch(console.error)

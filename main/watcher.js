@@ -3,9 +3,8 @@ const path = require('path')
 const fs = require('fs')
 const { processImage } = require('./ocr')
 const { insertScreenshot, updateOcrResult, markOcrFailed, updateAiResult, markAiFailed, getPendingScreenshots } = require('./db')
-const { tagImage } = require('./tagger')
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'])
-
+const { tagImage, waitForTagger } = require('./tagger')
 let watcher = null
 let mainWindow = null
 let watchPath = null
@@ -27,12 +26,12 @@ async function ingestFile(filepath) {
 
     mainWindow?.webContents.send('screenshot:added', { filepath, filename, timestamp })
 
-    // OCR
+    await waitForTagger() // ← wait for BLIP to finish loading before proceeding
+
     const { ocrText, width, height } = await processImage(filepath)
     updateOcrResult({ filepath, ocrText, width, height })
     mainWindow?.webContents.send('screenshot:ocr-done', { filepath, ocrText })
 
-    // AI tagging
     const { tags, description } = await tagImage(filepath)
     updateAiResult({ filepath, aiTags: tags, aiDescription: description })
     mainWindow?.webContents.send('screenshot:tagged', { filepath, aiTags: tags, aiDescription: description })

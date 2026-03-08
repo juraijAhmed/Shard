@@ -91,6 +91,125 @@ function TitleBar() {
   )
 }
 
+function ScreenshotModal({ screenshot, onClose }) {
+  if (!screenshot) return null
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.75)',
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backdropFilter: 'blur(4px)',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: 'var(--bg)',
+          border: '1px solid var(--border)',
+          borderRadius: '12px',
+          width: '680px',
+          maxWidth: '90vw',
+          maxHeight: '80vh',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+        }}
+      >
+        {/* Image */}
+        <div style={{ position: 'relative' }}>
+          <img
+            src={`file://${screenshot.filepath}`}
+            alt={screenshot.filename}
+            style={{ width: '100%', maxHeight: '420px', objectFit: 'contain', background: '#000' }}
+          />
+          <button
+            onClick={onClose}
+            style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              width: '28px',
+              height: '28px',
+              borderRadius: '50%',
+              background: 'rgba(0,0,0,0.6)',
+              border: '1px solid var(--border)',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '12px',
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Meta */}
+        <div className="flex gap-6 p-4 overflow-y-auto" style={{ borderTop: '1px solid var(--border)' }}>
+          <div className="flex flex-col gap-3 shrink-0" style={{ minWidth: '140px' }}>
+            <div>
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-dim)', marginBottom: '2px' }}>FILENAME</p>
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)', wordBreak: 'break-all' }}>{screenshot.filename}</p>
+            </div>
+            <div>
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-dim)', marginBottom: '2px' }}>DATE</p>
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)' }}>{new Date(screenshot.timestamp).toLocaleString()}</p>
+            </div>
+            {screenshot.ai_tags && (
+              <div>
+                <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-dim)', marginBottom: '6px' }}>TAGS</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                  {screenshot.ai_tags.split(',').map((tag) => (
+                    <span
+                      key={tag}
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '10px',
+                        color: 'var(--accent)',
+                        background: 'rgba(232,255,71,0.08)',
+                        border: '1px solid rgba(232,255,71,0.2)',
+                        borderRadius: '4px',
+                        padding: '2px 6px',
+                      }}
+                    >
+                      {tag.trim()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {screenshot.ocr_text && (
+            <div className="flex-1 overflow-y-auto">
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-dim)', marginBottom: '4px' }}>EXTRACTED TEXT</p>
+              <p style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '11px',
+                color: 'var(--text-secondary)',
+                lineHeight: '1.6',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}>
+                {screenshot.ocr_text}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Sidebar nav
 function Sidebar({ activeView, setActiveView }) {
   const navItems = [
@@ -138,15 +257,12 @@ function GalleryView() {
   const [selected, setSelected] = useState(null)
 
   useEffect(() => {
-    // Load all screenshots on mount
     window.shard.getAll().then(setScreenshots)
 
-    // Listen for new screenshots arriving in real time
     window.shard.onScreenshotAdded((data) => {
       setScreenshots((prev) => [data, ...prev])
     })
 
-    // Update OCR text when it finishes
     window.shard.onScreenshotOcrDone(({ filepath, ocrText }) => {
       setScreenshots((prev) =>
         prev.map((s) => s.filepath === filepath ? { ...s, ocr_text: ocrText } : s)
@@ -169,9 +285,9 @@ function GalleryView() {
   }
 
   return (
-    <div className="flex h-full overflow-hidden">
-      {/* Grid */}
-      <div className="flex-1 overflow-y-auto p-4">
+    <div className="relative h-full overflow-hidden">
+      <ScreenshotModal screenshot={selected} onClose={() => setSelected(null)} />
+      <div className="h-full overflow-y-auto p-4">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
           {screenshots.map((s) => (
             <div
@@ -179,9 +295,7 @@ function GalleryView() {
               onClick={() => setSelected(s)}
               className="rounded-lg overflow-hidden cursor-pointer transition-all"
               style={{
-                border: selected?.filepath === s.filepath
-                  ? '2px solid var(--accent)'
-                  : '2px solid var(--border)',
+                border: '2px solid var(--border)',
                 background: 'var(--bg-overlay)',
                 aspectRatio: '16/10',
               }}
@@ -195,56 +309,10 @@ function GalleryView() {
           ))}
         </div>
       </div>
-
-      {/* Detail panel */}
-      {selected && (
-        <div
-          className="flex flex-col overflow-hidden shrink-0"
-          style={{ width: '280px', borderLeft: '1px solid var(--border)', background: 'var(--bg)' }}
-        >
-          <img
-            src={`file://${selected.filepath}`}
-            alt={selected.filename}
-            style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', borderBottom: '1px solid var(--border)' }}
-          />
-          <div className="flex flex-col gap-3 p-4 overflow-y-auto">
-            <div>
-              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-dim)', marginBottom: '2px' }}>
-                FILENAME
-              </p>
-              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)', wordBreak: 'break-all' }}>
-                {selected.filename}
-              </p>
-            </div>
-            <div>
-              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-dim)', marginBottom: '2px' }}>
-                DATE
-              </p>
-              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)' }}>
-                {new Date(selected.timestamp).toLocaleString()}
-              </p>
-            </div>
-            <div>
-              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-dim)', marginBottom: '4px' }}>
-                EXTRACTED TEXT
-              </p>
-              <p style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '11px',
-                color: selected.ocr_text ? 'var(--text-secondary)' : 'var(--text-dim)',
-                lineHeight: '1.6',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-              }}>
-                {selected.ocr_text || (selected.ocr_status === 'pending' ? 'Processing...' : 'No text found')}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
+
 function SearchView() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
@@ -262,13 +330,14 @@ function SearchView() {
       const found = await window.shard.search(query)
       setResults(found)
       setHasSearched(true)
-    }, 300) // debounce — waits 300ms after user stops typing
+    }, 300)
 
     return () => clearTimeout(timeout)
   }, [query])
 
   return (
-    <div className="flex h-full overflow-hidden">
+    <div className="relative flex h-full overflow-hidden">
+      <ScreenshotModal screenshot={selected} onClose={() => setSelected(null)} />
       <div className="flex flex-col flex-1 overflow-hidden">
 
         {/* Search input */}
@@ -332,8 +401,8 @@ function SearchView() {
                   onClick={() => setSelected(s)}
                   className="flex gap-3 rounded-lg p-3 cursor-pointer transition-all"
                   style={{
-                    background: selected?.filepath === s.filepath ? 'var(--bg-overlay)' : 'transparent',
-                    border: selected?.filepath === s.filepath ? '1px solid var(--accent)' : '1px solid var(--border)',
+                    background: 'transparent',
+                    border: '1px solid var(--border)',
                   }}
                 >
                   <img
@@ -355,40 +424,9 @@ function SearchView() {
           )}
         </div>
       </div>
-
-      {/* Detail panel */}
-      {selected && (
-        <div
-          className="flex flex-col overflow-hidden shrink-0"
-          style={{ width: '280px', borderLeft: '1px solid var(--border)', background: 'var(--bg)' }}
-        >
-          <img
-            src={`file://${selected.filepath}`}
-            alt={selected.filename}
-            style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', borderBottom: '1px solid var(--border)' }}
-          />
-          <div className="flex flex-col gap-3 p-4 overflow-y-auto">
-            <div>
-              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-dim)', marginBottom: '2px' }}>FILENAME</p>
-              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)', wordBreak: 'break-all' }}>{selected.filename}</p>
-            </div>
-            <div>
-              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-dim)', marginBottom: '2px' }}>DATE</p>
-              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)' }}>{new Date(selected.timestamp).toLocaleString()}</p>
-            </div>
-            <div>
-              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-dim)', marginBottom: '4px' }}>EXTRACTED TEXT</p>
-              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)', lineHeight: '1.6', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                {selected.ocr_text || 'No text found'}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
-
 function SettingsView() {
   const [folder, setFolder] = useState('')
 
