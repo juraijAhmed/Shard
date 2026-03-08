@@ -768,7 +768,7 @@ function SettingsView({ applyTheme, currentTheme }) {
   const themes = [
     { id: 'dark',  label: 'Dark',  description: 'Black with teal accents' },
     { id: 'navy',  label: 'Navy',  description: 'Deep blue with teal accents' },
-    { id: 'light', label: 'Light', description: 'Clean ice blue' },
+    { id: 'light', label: 'Light', description: 'Clean ice blue (You need help)' },
   ]
 
   return (
