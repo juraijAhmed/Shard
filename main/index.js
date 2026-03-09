@@ -1,14 +1,9 @@
-if (process.env.NODE_ENV !== "production") {
-  require("electron-reload")(__dirname, {
-    electron: require("path").join(
-      __dirname,
-      "..",
-      "node_modules",
-      ".bin",
-      "electron.cmd",
-    ),
-    hardResetMethod: "exit",
-  });
+if (process.env.NODE_ENV !== 'production') {
+  require('electron-reload')(__dirname, {
+    electron: require('path').join(__dirname, '..', 'node_modules', '.bin', 'electron'),
+    hardResetMethod: 'exit',
+    forceHardReset: true,
+  })
 }
 const {
   app,
@@ -18,7 +13,7 @@ const {
   nativeImage,
   ipcMain,
   dialog,
-  clipboard
+  clipboard,
 } = require("electron");
 const path = require("path");
 const {
@@ -31,7 +26,8 @@ const { initWorker, terminate } = require("./ocr");
 const { startWatcher, stopWatcher, retryPending } = require("./watcher");
 const { initTagger, terminateTagger } = require("./tagger");
 const isDev = process.env.NODE_ENV !== "production";
-
+const { initEmbedder, terminateEmbedder } = require("./embedder");
+const { searchVectors } = require("./vectorstore");
 let mainWindow = null;
 let tray = null;
 
@@ -42,6 +38,7 @@ function createWindow() {
     minWidth: 800,
     minHeight: 500,
     frame: false,
+    icon: path.join(__dirname, "../renderer/public/logo.ico"),
     backgroundColor: "#0e0e0f",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -69,7 +66,9 @@ function createWindow() {
 }
 
 function createTray() {
-  const icon = nativeImage.createEmpty();
+  const icon = nativeImage.createFromPath(
+    path.join(__dirname, "../renderer/public/logo.ico"),
+  );
   tray = new Tray(icon);
 
   const contextMenu = Menu.buildFromTemplate([
@@ -130,18 +129,61 @@ ipcMain.handle("dialog:pickFolder", async () => {
   if (result.canceled) return null;
   return result.filePaths[0];
 });
+ipcMain.handle("screenshots:semanticSearch", async (_, query) => {
+  const { embed } = require("./embedder")
+  const { getAllScreenshots, searchScreenshots } = require("./db")
 
+  const trimmed = query.trim()
+  if (!trimmed) return []
+
+  const [vector, keywordResults] = await Promise.all([
+    embed(trimmed),
+    searchScreenshots(trimmed),
+  ])
+
+  if (!vector) return keywordResults
+
+  const vectorResults = await searchVectors(vector, 20)
+
+  // Filter out low confidence vector matches
+  const SCORE_THRESHOLD = 0.25
+  const confidentVectorResults = vectorResults.filter((r) => r.score >= SCORE_THRESHOLD)
+
+  const all = getAllScreenshots()
+  const byPath = Object.fromEntries(all.map((s) => [s.filepath, s]))
+
+  const seen = new Set()
+  const merged = []
+
+  // Add confident vector results first
+  for (const r of confidentVectorResults) {
+    if (byPath[r.filepath]) {
+      merged.push({ ...byPath[r.filepath], score: r.score })
+      seen.add(r.filepath)
+    }
+  }
+
+  // Add keyword results that weren't in vector results
+  for (const r of keywordResults) {
+    if (!seen.has(r.filepath)) {
+      merged.push({ ...r, score: 0 })
+      seen.add(r.filepath)
+    }
+  }
+
+  return merged
+})
 app.whenReady().then(async () => {
   const { session } = require("electron");
   session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
     callback({ requestHeaders: details.requestHeaders });
   });
-
   createWindow();
   createTray();
   initWorker().catch(console.error);
   initTagger().catch(console.error);
   initWorker().catch(console.error);
+  initEmbedder().catch(console.error);
 
   const savedFolder = getSetting("watchFolder");
   if (savedFolder) {
@@ -156,4 +198,5 @@ app.on("before-quit", async () => {
   stopWatcher();
   await terminate();
   await terminateTagger();
+  await terminateEmbedder();
 });

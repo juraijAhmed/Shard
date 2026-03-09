@@ -9,14 +9,15 @@ contextBridge.exposeInMainWorld('shard', {
   // Screenshots
   getAll: () => ipcRenderer.invoke('screenshots:getAll'),
   search: (query) => ipcRenderer.invoke('screenshots:search', query),
-
+  semanticSearch: (query) => ipcRenderer.invoke('screenshots:semanticSearch', query),
+  onScreenshotRemoved: (cb) => ipcRenderer.on('screenshot:removed', (_, data) => cb(data)),
   // Settings
   getSetting: (key) => ipcRenderer.invoke('settings:get', key),
   setSetting: (key, value) => ipcRenderer.invoke('settings:set', key, value),
 
   // Folder picker
   pickFolder: () => ipcRenderer.invoke('dialog:pickFolder'),
-
+ 
   // URL utils
   openUrl: (url) => shell.openExternal(url),
   copyToClipboard: (text) => ipcRenderer.send('clipboard:write', text),

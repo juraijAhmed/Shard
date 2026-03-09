@@ -35,24 +35,28 @@ async function processQueue() {
 }
 
 async function runOcr(filepath) {
-  const { data } = await worker.recognize(filepath)
+  // Retry up to 3 times in case file isn't ready
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const { data } = await worker.recognize(filepath)
 
-  // Get image dimensions
-  let width = null
-  let height = null
-  try {
-    const dims = sizeOf(filepath)
-    width = dims.width
-    height = dims.height
-  } catch (_) {}
+      let width = null
+      let height = null
+      try {
+        const dims = sizeOf(filepath)
+        width = dims.width
+        height = dims.height
+      } catch (_) {}
 
-  return {
-    ocrText: data.text.trim(),
-    width,
-    height,
+      return { ocrText: data.text.trim(), width, height }
+
+    } catch (err) {
+      if (attempt === 3) throw err
+      console.warn(`OCR attempt ${attempt} failed for ${filepath}, retrying...`)
+      await new Promise((r) => setTimeout(r, 1000 * attempt)) // wait 1s, 2s
+    }
   }
 }
-
 // Public: queue a file for OCR, returns a promise
 function processImage(filepath) {
   return new Promise((resolve, reject) => {

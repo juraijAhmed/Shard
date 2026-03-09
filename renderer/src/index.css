@@ -14,7 +14,49 @@
   --font-display:   'Syne', sans-serif;
   --font-mono:      'DM Mono', monospace;
 }
+:root[data-theme="green"] {
+  --bg:             #0d1210;
+  --bg-raised:      #121a15;
+  --bg-overlay:     #182318;
+  --border:         #1e3325;
+  --accent:         #4ade80;
+  --accent-dim:     #22c55e;
+  --accent-glow:    rgba(74, 222, 128, 0.12);
+  --text-primary:   #ecfdf0;
+  --text-secondary: #86efac;
+  --text-dim:       #2d5438;
+  --font-display:   'Syne', sans-serif;
+  --font-mono:      'DM Mono', monospace;
+}
+:root[data-theme="orange"] {
+  --bg:             #110e09;
+  --bg-raised:      #1a1410;
+  --bg-overlay:     #231b12;
+  --border:         #3d2e1a;
+  --accent:         #fb923c;
+  --accent-dim:     #ea7c20;
+  --accent-glow:    rgba(251, 146, 60, 0.12);
+  --text-primary:   #fef3e8;
+  --text-secondary: #fdba74;
+  --text-dim:       #4a3520;
+  --font-display:   'Syne', sans-serif;
+  --font-mono:      'DM Mono', monospace;
+}
 
+:root[data-theme="red"] {
+  --bg:             #110a0a;
+  --bg-raised:      #1a0f0f;
+  --bg-overlay:     #231414;
+  --border:         #3d1a1a;
+  --accent:         #f87171;
+  --accent-dim:     #ef4444;
+  --accent-glow:    rgba(248, 113, 113, 0.12);
+  --text-primary:   #fff1f1;
+  --text-secondary: #fca5a5;
+  --text-dim:       #4a2020;
+  --font-display:   'Syne', sans-serif;
+  --font-mono:      'DM Mono', monospace;
+}
 :root[data-theme="navy"] {
   --bg:             #0a0f14;
   --bg-raised:      #0f1923;
@@ -56,7 +98,9 @@ html, body, #root {
   width: 100%;
   overflow: hidden;
 }
-
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 body {
   background: var(--bg);
   color: var(--text-primary);
