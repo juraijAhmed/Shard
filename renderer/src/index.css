@@ -11,7 +11,7 @@
   --text-primary:   #f0f0f0;
   --text-secondary: #888890;
   --text-dim:       #444450;
-  --font-display:   'Syne', sans-serif;
+  --font-display:   'Satoshi', sans-serif;
   --font-mono:      'DM Mono', monospace;
 }
 :root[data-theme="green"] {
@@ -87,10 +87,27 @@
   --font-mono:      'DM Mono', monospace;
 }
 
+input::placeholder {
+  font-family: var(--font-display);
+  color: var(--text-dim);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Regular.woff2') format('woff2');
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Bold.woff2') format('woff2');
+  font-weight: 700;
 }
 
 html, body, #root {
@@ -98,9 +115,33 @@ html, body, #root {
   width: 100%;
   overflow: hidden;
 }
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+@keyframes splashRock {
+  from { transform: translateX(-12px) rotate(-3deg); }
+  to   { transform: translateX(12px) rotate(3deg); }
+}
+
+@keyframes splashFly {
+  from {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translate(calc(-50vw + 48px), calc(-50vh + 20px)) scale(0.4);
+    opacity: 0;
+  }
+}
+
+@keyframes scanIndeterminate {
+  0%   { transform: translateX(-100%); }
+  50%  { transform: translateX(150%); }
+  100% { transform: translateX(400%); }
+}
+
 body {
   background: var(--bg);
   color: var(--text-primary);

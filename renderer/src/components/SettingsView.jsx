@@ -323,6 +323,21 @@ export function SettingsView({ applyTheme, currentTheme }) {
             </div>
           </div>
         </div>
+        <button
+          onClick={() => window.shard.openUrl("https://tally.so/r/Ek1NL2")}
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: "12px",
+            color: "var(--accent)",
+            background: "var(--accent-glow)",
+            border: "1px solid var(--accent-dim)",
+            borderRadius: "6px",
+            padding: "8px 14px",
+            cursor: "pointer",
+          }}
+        >
+          Give Feedback
+        </button>
       </div>
     </div>
   );

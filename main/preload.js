@@ -1,28 +1,47 @@
-const { contextBridge, ipcRenderer, shell, clipboard } = require('electron')
+const { contextBridge, ipcRenderer, shell, clipboard } = require("electron");
 
-contextBridge.exposeInMainWorld('shard', {
+contextBridge.exposeInMainWorld("shard", {
   // Window controls
-  minimize: () => ipcRenderer.send('window:minimize'),
-  maximize: () => ipcRenderer.send('window:maximize'),
-  close: () => ipcRenderer.send('window:close'),
+  minimize: () => ipcRenderer.send("window:minimize"),
+  maximize: () => ipcRenderer.send("window:maximize"),
+  close: () => ipcRenderer.send("window:close"),
 
   // Screenshots
-  getAll: () => ipcRenderer.invoke('screenshots:getAll'),
-  search: (query) => ipcRenderer.invoke('screenshots:search', query),
-  semanticSearch: (query) => ipcRenderer.invoke('screenshots:semanticSearch', query),
-  onScreenshotRemoved: (cb) => ipcRenderer.on('screenshot:removed', (_, data) => cb(data)),
+  getAll: () => ipcRenderer.invoke("screenshots:getAll"),
+  search: (query) => ipcRenderer.invoke("screenshots:search", query),
+  semanticSearch: (query) =>
+    ipcRenderer.invoke("screenshots:semanticSearch", query),
+  onScreenshotRemoved: (cb) =>
+    ipcRenderer.on("screenshot:removed", (_, data) => cb(data)),
+  updateUserTags: (filepath, userTags) =>
+    ipcRenderer.invoke("screenshots:updateUserTags", filepath, userTags),
+  deleteScreenshot: (filepath) =>
+    ipcRenderer.invoke("screenshots:delete", filepath),
+  togglePin: (filepath) =>
+    ipcRenderer.invoke("screenshots:togglePin", filepath),
+  onScreenshotTagged: (cb) =>
+    ipcRenderer.once("screenshot:tagged", (_, data) => cb(data)),
+  reprocessScreenshot: (filepath) =>
+    ipcRenderer.invoke("screenshot:reprocess", filepath),
   // Settings
-  getSetting: (key) => ipcRenderer.invoke('settings:get', key),
-  setSetting: (key, value) => ipcRenderer.invoke('settings:set', key, value),
-
+  getSetting: (key) => ipcRenderer.invoke("settings:get", key),
+  setSetting: (key, value) => ipcRenderer.invoke("settings:set", key, value),
   // Folder picker
-  pickFolder: () => ipcRenderer.invoke('dialog:pickFolder'),
- 
+  pickFolder: () => ipcRenderer.invoke("dialog:pickFolder"),
+
   // URL utils
-  openUrl: (url) => shell.openExternal(url),
-  copyToClipboard: (text) => ipcRenderer.send('clipboard:write', text),
+  openUrl: (url) => ipcRenderer.invoke("open:url", url),
+  copyToClipboard: (text) => ipcRenderer.send("clipboard:write", text),
 
   // Real-time events
-  onScreenshotAdded: (cb) => ipcRenderer.on('screenshot:added', (_, data) => cb(data)),
-  onScreenshotOcrDone: (cb) => ipcRenderer.on('screenshot:ocr-done', (_, data) => cb(data)),
-})
+  onScreenshotAdded: (cb) =>
+    ipcRenderer.on("screenshot:added", (_, data) => cb(data)),
+  onScreenshotOcrDone: (cb) =>
+    ipcRenderer.once("screenshot:ocr-done", (_, data) => cb(data)),
+  countFolder: (folderPath) => ipcRenderer.invoke("folder:count", folderPath),
+  onScanStart: (cb) => ipcRenderer.on("scan:start", (_, data) => cb(data)),
+  onScanProgress: (cb) =>
+    ipcRenderer.on("scan:progress", (_, data) => cb(data)),
+  onScanComplete: (cb) => ipcRenderer.on("scan:complete", () => cb()),
+  removeListener: (channel, cb) => ipcRenderer.removeListener(channel, cb),
+});

@@ -131,7 +131,7 @@ export function TitleBar({ theme, onToggleTheme }) {
       {/* Right side controls */}
       <div
         className="flex items-center gap-1"
-        style={{ WebkitAppRegion: "no-drag" }}
+        style={{ WebkitAppRegion: "no-drag", marginInline: '10px'}}
       >
         <ThemeDropdown theme={theme} onSelect={onToggleTheme} />
 

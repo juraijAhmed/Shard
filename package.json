@@ -1,5 +1,6 @@
 {
   "name": "shard",
+  "productName": "Shard",
   "version": "0.1.0",
   "description": "Screenshot Yard — find any screenshot instantly",
   "main": "main/index.js",
@@ -15,7 +16,8 @@
     "image-size": "^2.0.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "tesseract.js": "^7.0.0",
+    "sharp": "^0.34.5",
+    "trash": "^10.1.1",
     "vectra": "^0.12.3"
   },
   "devDependencies": {

@@ -4,82 +4,54 @@ const { app } = require('electron')
 
 env.cacheDir = path.join(app.getPath('userData'), 'models')
 
-const CANDIDATE_LABELS = [
-  'airplane', 'aircraft', 'helicopter', 'airport',
-  'car', 'vehicle', 'train', 'ship',
-  'resume', 'CV', 'cover letter', 'contract', 'invoice',
-  'receipt', 'certificate', 'report', 'letter',
-  'code editor', 'terminal', 'browser', 'website',
-  'spreadsheet', 'presentation slide', 'email',
-  'chat conversation', 'video call', 'login screen',
-  'graph', 'chart', 'dashboard', 'diagram', 'map', 'table',
-  'social media post', 'tweet', 'news article', 'video player',
-  'error message', 'warning', 'notification',
-  'photograph', 'clothing', 'food', 'animal', 'cat', 'dog',
-  'person', 'building', 'nature', 'product photo',
-  't-shirt', 'dark theme', 'light theme',
-]
-
-const SYNONYMS = {
-  'airplane':           ['plane', 'flight', 'aircraft', 'aviation'],
-  'aircraft':           ['plane', 'airplane', 'flight', 'aviation'],
-  'resume':             ['CV', 'job application', 'work experience'],
-  'CV':                 ['resume', 'job application'],
-  'invoice':            ['bill', 'payment', 'receipt'],
-  'code editor':        ['code', 'programming', 'IDE'],
-  'terminal':           ['command line', 'shell', 'console'],
-  'browser':            ['website', 'internet', 'web'],
-  'spreadsheet':        ['Excel', 'table', 'data'],
-  'presentation slide': ['PowerPoint', 'slides', 'deck'],
-  'error message':      ['bug', 'crash', 'exception'],
-  'graph':              ['chart', 'data', 'statistics'],
-  'map':                ['location', 'geography', 'navigation'],
-  'social media post':  ['tweet', 'Instagram', 'Facebook'],
-  'cat':                ['animal', 'pet'],
-  'dog':                ['animal', 'pet'],
-  'clothing':           ['fashion', 'apparel', 'shirt', 'outfit'],
-  't-shirt':            ['clothing', 'fashion', 'shirt'],
-}
-
-let classifier = null
-let readyResolve
-const readyPromise = new Promise((resolve) => { readyResolve = resolve })
+let captioner = null
+let initPromise = null
 
 async function initTagger() {
-  if (classifier) return
-  try {
-    classifier = await pipeline('zero-shot-image-classification', 'Xenova/clip-vit-base-patch32')
-    readyResolve()
-  } catch (err) {
-    console.error('Tagger failed to init:', err)
-    readyResolve() // resolve anyway so OCR isn't blocked forever
-  }
+  if (initPromise) return initPromise
+  initPromise = (async () => {
+    console.log('Shard: loading captioning model...')
+    captioner = await pipeline('image-to-text', 'Xenova/vit-gpt2-image-captioning')
+    console.log('Shard: captioning model ready')
+  })()
+  return initPromise
 }
 
 async function waitForTagger() {
-  return readyPromise
+  await initTagger()
 }
 
 async function tagImage(filepath) {
-  if (!classifier) return { tags: '', description: '' }
+  if (!captioner) await initTagger()
+  try {
+    const result = await captioner(filepath)
+    const caption = result[0]?.generated_text || ''
 
-  const output = await classifier(filepath, CANDIDATE_LABELS, { topk: 8 })
-  const matched = output.filter((r) => r.score > 0.12)
-  const baseTags = matched.map((r) => r.label)
+    // Use caption as both description and extract keywords as tags
+    const tags = extractKeywords(caption)
 
-  const allTags = new Set(baseTags)
-  for (const tag of baseTags) {
-    (SYNONYMS[tag] || []).forEach((s) => allTags.add(s))
+    return { tags, description: caption }
+  } catch (err) {
+    console.error('Captioning failed:', filepath, err)
+    return { tags: '', description: '' }
   }
+}
 
-  const tags = [...allTags].join(', ')
-  const description = baseTags.slice(0, 3).join(', ')
-
-  return { tags, description }
+// Pull meaningful words out of the caption as tags
+function extractKeywords(caption) {
+  const stopwords = new Set(['a', 'an', 'the', 'is', 'are', 'was', 'with', 'of', 'in', 'on', 'at', 'to', 'and', 'or', 'it', 'its', 'this', 'that', 'by', 'for', 'from', 'has', 'have', 'be', 'been', 'being'])
+  return caption
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, '')
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !stopwords.has(w))
+    .join(', ')
 }
 
 async function terminateTagger() {
-  classifier = null
+  captioner = null
+  initPromise = null  // ← this line is critical, must reset so re-init works
+  console.log('Shard: captioning model unloaded')
 }
 
-module.exports = { initTagger, tagImage, terminateTagger, waitForTagger }
+module.exports = { tagImage, waitForTagger, terminateTagger }

@@ -8,6 +8,13 @@ let embedder = null
 let readyResolve
 const readyPromise = new Promise((resolve) => { readyResolve = resolve })
 
+async function terminateEmbedder() {
+  embedder = null
+  // Reset ready promise
+  readyPromise = new Promise((resolve) => { readyResolve = resolve })
+}
+
+
 async function initEmbedder() {
   if (embedder) return
   try {
@@ -24,7 +31,7 @@ async function waitForEmbedder() {
 }
 
 async function embed(text) {
-  if (!embedder) return null
+   if (!embedder) await initEmbedder() 
   const output = await embedder(text, { pooling: 'mean', normalize: true })
   return Array.from(output.data)
 }
