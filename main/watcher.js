@@ -27,48 +27,58 @@ let mainWindow = null;
 let watchPath = null;
 let idleTimer = null;
 
-const OCR_TAG_THRESHOLD = 30 // chars — if OCR text is longer than this, skip vision model
+const OCR_TAG_THRESHOLD = 30;
 
 function extractKeywordsFromOcr(text) {
-  if (!text) return []
+  if (!text) return [];
   const stopwords = new Set([
     'the','a','an','and','or','but','in','on','at','to','for','of','with','by',
     'from','is','are','was','were','be','been','has','have','had','this','that',
     'these','those','it','its','as','if','into','via','per','not','also','more',
     'your','our','you','we','he','she','they','will','can','may','all','one','two',
-  ])
+  ]);
   return [...new Set(
     text.toLowerCase()
       .replace(/[^a-z0-9\s]/g, ' ')
       .split(/\s+/)
       .filter(w => w.length > 3 && !stopwords.has(w))
-  )].slice(0, 8)
+  )].slice(0, 8);
 }
 
 function isImage(filepath) {
   return IMAGE_EXTENSIONS.has(path.extname(filepath).toLowerCase());
 }
 
+function scheduleIdle() {
+  if (idleTimer) clearTimeout(idleTimer);
+  idleTimer = setTimeout(async () => {
+    console.log("Shard: idle, unloading models to free memory");
+    await terminate();
+    await terminateTagger();
+    await terminateEmbedder();
+    if (global.gc) global.gc();
+    // Second pass GC to catch deferred cleanup
+    setTimeout(() => { if (global.gc) global.gc(); }, 5000);
+  }, 15000);
+}
+
 async function runAiTagging(filepath, ocrText) {
   if (ocrText && ocrText.length > OCR_TAG_THRESHOLD) {
-    // Rich text — derive tags from OCR, skip slow vision model
-    const aiTags = extractKeywordsFromOcr(ocrText).join(', ')
-    const aiDescription = ocrText.slice(0, 120).replace(/\n/g, ' ').trim()
-    updateAiResult({ filepath, aiTags, aiDescription })
-    markAiDone(filepath)
-    return { aiTags, aiDescription }
+    const aiTags = extractKeywordsFromOcr(ocrText).join(', ');
+    const aiDescription = ocrText.slice(0, 120).replace(/\n/g, ' ').trim();
+    updateAiResult({ filepath, aiTags, aiDescription });
+    markAiDone(filepath);
+    return { aiTags, aiDescription };
   } else {
-    // No/little text — use vision model for scene understanding
-    await waitForTagger()
-    const { tags, description } = await tagImage(filepath)
-    updateAiResult({ filepath, aiTags: tags, aiDescription: description })
-    return { aiTags: tags, aiDescription: description }
+    await waitForTagger();
+    const { tags, description } = await tagImage(filepath);
+    updateAiResult({ filepath, aiTags: tags, aiDescription: description });
+    return { aiTags: tags, aiDescription: description };
   }
 }
 
 async function ingestFile(filepath) {
   if (!isImage(filepath)) return;
-  if (idleTimer) clearTimeout(idleTimer);
 
   try {
     const stats = fs.statSync(filepath);
@@ -86,18 +96,18 @@ async function ingestFile(filepath) {
       const needsEmbed = existing.embed_status === "pending";
       if (!needsOcr && !needsAi && !needsEmbed) return;
 
-      let ocrText = existing.ocr_text
+      let ocrText = existing.ocr_text;
 
       if (needsOcr) {
         await waitForWorker();
         const res = await processImage(filepath);
-        ocrText = res.ocrText
+        ocrText = res.ocrText;
         updateOcrResult({ filepath, ocrText, width: res.width, height: res.height });
         mainWindow?.webContents.send("screenshot:ocr-done", { filepath, ocrText });
       }
 
       if (needsAi) {
-        const { aiTags, aiDescription } = await runAiTagging(filepath, ocrText)
+        const { aiTags, aiDescription } = await runAiTagging(filepath, ocrText);
         mainWindow?.webContents.send("screenshot:tagged", { filepath, aiTags, aiDescription });
       }
 
@@ -122,7 +132,7 @@ async function ingestFile(filepath) {
     updateOcrResult({ filepath, ocrText, width, height });
     mainWindow?.webContents.send("screenshot:ocr-done", { filepath, ocrText });
 
-    const { aiTags, aiDescription } = await runAiTagging(filepath, ocrText)
+    const { aiTags, aiDescription } = await runAiTagging(filepath, ocrText);
     mainWindow?.webContents.send("screenshot:tagged", { filepath, aiTags, aiDescription });
 
     await waitForEmbedder();
@@ -138,14 +148,6 @@ async function ingestFile(filepath) {
     markOcrFailed(filepath);
     markAiFailed(filepath);
   }
-
-  idleTimer = setTimeout(async () => {
-    console.log("Shard: idle, unloading models to free memory");
-    await terminate();
-    await terminateTagger();
-    await terminateEmbedder();
-    if (global.gc) global.gc();
-  }, 30000);
 }
 
 function startWatcher(folderPath, window) {
@@ -178,15 +180,7 @@ function startWatcher(folderPath, window) {
 
     mainWindow?.webContents.send("scan:complete");
     console.log("Shard: initial scan complete");
-
-    if (idleTimer) clearTimeout(idleTimer);
-    idleTimer = setTimeout(async () => {
-      console.log("Shard: idle, unloading models to free memory");
-      await terminate();
-      await terminateTagger();
-      await terminateEmbedder();
-      if (global.gc) global.gc();
-    }, 30000);
+    scheduleIdle();
   })();
 
   watcher = chokidar.watch(folderPath, {
@@ -196,11 +190,16 @@ function startWatcher(folderPath, window) {
     awaitWriteFinish: { stabilityThreshold: 1500, pollInterval: 100 },
   });
 
-  watcher.on("add", (filepath) => ingestFile(filepath));
+  watcher.on("add", async (filepath) => {
+    await ingestFile(filepath);
+    scheduleIdle();
+  });
+
   watcher.on("unlink", (filepath) => {
     deleteScreenshot(filepath);
     mainWindow?.webContents.send("screenshot:removed", { filepath });
   });
+
   watcher.on("error", (err) => console.error("Watcher error:", err));
 
   console.log(`Shard: watching ${folderPath}`);
@@ -208,6 +207,7 @@ function startWatcher(folderPath, window) {
 
 function stopWatcher() {
   if (watcher) { watcher.close(); watcher = null; }
+  if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
 }
 
 function getWatchPath() {
@@ -219,13 +219,14 @@ async function retryPending() {
   for (const screenshot of pending) {
     await ingestFile(screenshot.filepath);
   }
+  scheduleIdle();
 }
 
 async function ingestFileForced(filepath) {
-  // Reset statuses so ingestFile re-runs the full pipeline
-  const { resetScreenshotStatus } = require('./db')
-  resetScreenshotStatus(filepath)
-  await ingestFile(filepath)
+  const { resetScreenshotStatus } = require('./db');
+  resetScreenshotStatus(filepath);
+  await ingestFile(filepath);
+  scheduleIdle();
 }
 
-module.exports = { startWatcher, stopWatcher, getWatchPath, retryPending, ingestFileForced }
+module.exports = { startWatcher, stopWatcher, getWatchPath, retryPending, ingestFileForced };

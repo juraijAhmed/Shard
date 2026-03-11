@@ -5,7 +5,7 @@ import { Sidebar } from "./components/Sidebar";
 import { GalleryView } from "./components/GalleryView";
 import { SearchView } from "./components/SearchView";
 import { SettingsView } from "./components/SettingsView";
-
+import logo from '../public/logo.png'
 const views = {
   gallery: GalleryView,
   search: SearchView,
@@ -28,7 +28,7 @@ function SplashAnimation({ onComplete }) {
       transition: phase === 'fly' ? 'opacity 0.6s ease 0.2s' : 'none',
     }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-        <img src="/logo.png" alt="Shard" style={{
+        <img src={logo} alt="Shard" style={{
           width: '72px', height: 'auto',
           animation: phase === 'rock'
             ? 'splashRock 0.5s ease-in-out infinite alternate'

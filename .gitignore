@@ -3,3 +3,5 @@ dist/
 .env
 *.db
 userData/
+dist-build/
+renderer/dist/

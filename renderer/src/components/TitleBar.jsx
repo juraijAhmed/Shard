@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import logo from '../../public/logo.png'
 
 function ThemeDropdown({ theme, onSelect }) {
   const [open, setOpen] = useState(false);
@@ -117,7 +118,7 @@ export function TitleBar({ theme, onToggleTheme }) {
       {/* Logo */}
       <div style={{ WebkitAppRegion: "no-drag" }}>
         <img
-          src="/logo.png"
+          src={logo}
           alt="Shard"
           style={{
             height: "32px",

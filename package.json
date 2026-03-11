@@ -2,12 +2,15 @@
   "name": "shard",
   "productName": "Shard",
   "version": "0.1.0",
-  "description": "Screenshot Yard — find any screenshot instantly",
+  "description": "Shard — find any screenshot instantly",
+  "author": "Juraij Ahmed",
   "main": "main/index.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
-    "dev:vite": "vite renderer",
-    "dev:electron": "wait-on http://localhost:5173 && electron --js-flags=\"--expose-gc\" ."
+    "dev:electron": "wait-on http://localhost:5173 && electron --js-flags=\"--expose-gc\" .",
+    "dev:vite": "cd renderer && vite",
+    "build": "cd renderer && vite build",
+    "dist": "npm run build && electron-builder --win"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",
@@ -30,5 +33,50 @@
     "tailwindcss": "^4.2.1",
     "vite": "^7.3.1",
     "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.shard.app",
+    "productName": "Shard",
+    "copyright": "Copyright © 2026",
+    "win": {
+      "target": "nsis",
+      "icon": "renderer/public/logo.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Shard"
+    },
+    "files": [
+      "main/**/*",
+      "renderer/dist/**/*",
+      "renderer/public/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "renderer/public/fonts",
+        "to": "fonts"
+      },
+      {
+        "from": "renderer/public/logo.ico",
+        "to": "logo.ico"
+      }
+    ],
+    "directories": {
+      "output": "dist-build"
+    },
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*",
+      "node_modules/sharp/**/*",
+      "node_modules/@huggingface/**/*",
+      "node_modules/onnxruntime-node/**/*",
+      "renderer/public/logo.ico",
+      "renderer/public/logo.png"
+    ]
   }
 }

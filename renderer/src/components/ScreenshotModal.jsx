@@ -130,16 +130,15 @@ const [reprocessCount, setReprocessCount] = useState(0)
   }, [screenshot, onClose]);
 
   // Sync local state when screenshot changes
-  useEffect(() => {
+useEffect(() => {
   setPinned(!!screenshot?.pinned)
   setLocalOcrText(screenshot?.ocr_text || "")
   setLocalOcrStatus(screenshot?.ocr_status || "pending")
   setLocalTags(screenshot?.ai_tags || "")
   setReprocessing(false)
   setReprocessCount(0)
+  setDeleting(false)  // ← add this
 }, [screenshot?.filepath, screenshot?.pinned])
-
-
   // Live update listeners — properly cleaned up to avoid stacking
 useEffect(() => {
   if (!screenshot) return
