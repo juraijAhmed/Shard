@@ -149,7 +149,7 @@ export function GalleryView() {
     return (
       <div className="flex flex-col h-full" style={{ padding: "28px" }}>
         <h1 style={{ fontFamily: "var(--font-display)", fontSize: "26px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "4px" }}>
-          Your Screenshots
+          Your Screenshots!
         </h1>
         <p style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--text-dim)" }}>
           No screenshots yet

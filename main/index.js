@@ -13,6 +13,7 @@ if (!require("electron").app.isPackaged) {
   });
 }
 
+const { autoUpdater } = require("electron-updater");
 const {
   app,
   BrowserWindow,
@@ -23,9 +24,10 @@ const {
   dialog,
   clipboard,
   shell,
+  session,
 } = require("electron");
 
-app.commandLine.appendSwitch('js-flags', '--expose-gc')
+app.commandLine.appendSwitch("js-flags", "--expose-gc");
 
 const path = require("path");
 const fs = require("fs");
@@ -41,6 +43,7 @@ const { startWatcher, stopWatcher, retryPending } = require("./watcher");
 const { tagImage, waitForTagger, terminateTagger } = require("./tagger");
 const { initEmbedder, terminateEmbedder } = require("./embedder");
 const { searchVectors } = require("./vectorstore");
+const { checkLicense, activateAndSave } = require("./license");
 
 const isDev = !app.isPackaged;
 let mainWindow = null;
@@ -50,14 +53,13 @@ function getIconPath() {
   if (app.isPackaged) {
     const extra = path.join(process.resourcesPath, "logo.ico");
     if (fs.existsSync(extra)) return extra;
-    const unpacked = path.join(
+    return path.join(
       process.resourcesPath,
       "app.asar.unpacked",
       "renderer",
       "public",
       "logo.ico",
     );
-    return unpacked;
   }
   return path.join(__dirname, "../renderer/public/logo.ico");
 }
@@ -83,7 +85,9 @@ function createWindow() {
   if (isDev) {
     mainWindow.loadURL("http://localhost:5173");
   } else {
-    mainWindow.loadFile(path.join(app.getAppPath(), "renderer/dist/index.html"));
+    mainWindow.loadFile(
+      path.join(app.getAppPath(), "renderer/dist/index.html"),
+    );
   }
 
   mainWindow.once("ready-to-show", () => {
@@ -176,10 +180,29 @@ function searchByDate(query, allScreenshots) {
   const q = query.toLowerCase().trim();
 
   const months = {
-    january: 0, february: 1, march: 2, april: 3, may: 4, june: 5,
-    july: 6, august: 7, september: 8, october: 9, november: 10, december: 11,
-    jan: 0, feb: 1, mar: 2, apr: 3, jun: 5, jul: 6,
-    aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+    january: 0,
+    february: 1,
+    march: 2,
+    april: 3,
+    may: 4,
+    june: 5,
+    july: 6,
+    august: 7,
+    september: 8,
+    october: 9,
+    november: 10,
+    december: 11,
+    jan: 0,
+    feb: 1,
+    mar: 2,
+    apr: 3,
+    jun: 5,
+    jul: 6,
+    aug: 7,
+    sep: 8,
+    oct: 9,
+    nov: 10,
+    dec: 11,
   };
 
   for (const [name, idx] of Object.entries(months)) {
@@ -223,10 +246,29 @@ function searchByDate(query, allScreenshots) {
 
 function parseSpecificDate(q) {
   const months = {
-    january: 0, february: 1, march: 2, april: 3, may: 4, june: 5,
-    july: 6, august: 7, september: 8, october: 9, november: 10, december: 11,
-    jan: 0, feb: 1, mar: 2, apr: 3, jun: 5, jul: 6,
-    aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+    january: 0,
+    february: 1,
+    march: 2,
+    april: 3,
+    may: 4,
+    june: 5,
+    july: 6,
+    august: 7,
+    september: 8,
+    october: 9,
+    november: 10,
+    december: 11,
+    jan: 0,
+    feb: 1,
+    mar: 2,
+    apr: 3,
+    jun: 5,
+    jul: 6,
+    aug: 7,
+    sep: 8,
+    oct: 9,
+    nov: 10,
+    dec: 11,
   };
 
   for (const [name, idx] of Object.entries(months)) {
@@ -289,14 +331,24 @@ function createTray() {
   });
 }
 
-// Window controls
+// ─── Window controls ──────────────────────────────────────────────────────────
 ipcMain.on("window:minimize", () => mainWindow.minimize());
 ipcMain.on("window:maximize", () =>
   mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize(),
 );
 ipcMain.on("window:close", () => mainWindow.hide());
 
-// Screenshots
+// ─── Updater ──────────────────────────────────────────────────────────────────
+ipcMain.on("update:install", () => {
+  app.isQuitting = true;
+  autoUpdater.quitAndInstall();
+});
+
+// ─── License ──────────────────────────────────────────────────────────────────
+ipcMain.handle("license:check", async () => checkLicense());
+ipcMain.handle("license:activate", async (_, key) => activateAndSave(key));
+
+// ─── Screenshots ──────────────────────────────────────────────────────────────
 ipcMain.handle("screenshots:getAll", () => getAllScreenshots());
 ipcMain.handle("screenshots:search", (_, query) => searchScreenshots(query));
 ipcMain.handle("screenshots:updateUserTags", (_, filepath, userTags) => {
@@ -321,15 +373,11 @@ ipcMain.handle("screenshots:togglePin", (_, filepath) => {
   return togglePin(filepath);
 });
 
-ipcMain.on("clipboard:write", (_, text) => {
-  clipboard.writeText(text);
-});
+ipcMain.on("clipboard:write", (_, text) => clipboard.writeText(text));
 
-ipcMain.handle("open:url", (_, url) => {
-  shell.openExternal(url);
-});
+ipcMain.handle("open:url", (_, url) => shell.openExternal(url));
 
-// Settings
+// ─── Settings ─────────────────────────────────────────────────────────────────
 ipcMain.handle("settings:get", (_, key) => getSetting(key));
 ipcMain.handle("settings:set", async (_, key, value) => {
   setSetting(key, value);
@@ -338,7 +386,7 @@ ipcMain.handle("settings:set", async (_, key, value) => {
   }
 });
 
-// Folder picker
+// ─── Folder picker ────────────────────────────────────────────────────────────
 ipcMain.handle("dialog:pickFolder", async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ["openDirectory"],
@@ -361,6 +409,7 @@ ipcMain.handle("screenshot:reprocess", async (_, filepath) => {
   await ingestFileForced(filepath);
 });
 
+// ─── Semantic search ──────────────────────────────────────────────────────────
 ipcMain.handle("screenshots:semanticSearch", async (_, query) => {
   const { embed } = require("./embedder");
   const { getAllScreenshots, searchScreenshots } = require("./db");
@@ -410,6 +459,7 @@ ipcMain.handle("screenshots:semanticSearch", async (_, query) => {
   return merged;
 });
 
+// ─── App lifecycle ────────────────────────────────────────────────────────────
 app.setName("Shard");
 
 const gotTheLock = app.requestSingleInstanceLock();
@@ -426,7 +476,33 @@ if (!gotTheLock) {
   });
 
   app.whenReady().then(async () => {
-    const { session } = require("electron");
+    // ─── Auto updater setup ─────────────────────────────────────────────────
+    autoUpdater.autoDownload = true;
+    autoUpdater.autoInstallOnAppQuit = false;
+
+    autoUpdater.on("checking-for-update", () => {
+      console.log("Shard: checking for update...");
+    });
+    autoUpdater.on("update-available", (info) => {
+      console.log("Shard: update available, downloading...", info);
+    });
+    autoUpdater.on("update-downloaded", (info) => {
+      console.log("Shard: update downloaded", info);
+      mainWindow?.webContents.send("update:available", {
+        version: info.version,
+      });
+    });
+    autoUpdater.on("update-not-available", (info) => {
+      console.log("Shard: update not available", info);
+    });
+    autoUpdater.on("error", (err) => {
+      console.error("Shard: updater error", err.message);
+    });
+    if (app.isPackaged) {
+      autoUpdater.checkForUpdates();
+    }
+
+    // ─── Session ────────────────────────────────────────────────────────────
     session.defaultSession.webRequest.onBeforeSendHeaders(
       (details, callback) => {
         callback({ requestHeaders: details.requestHeaders });

@@ -33,6 +33,16 @@ contextBridge.exposeInMainWorld("shard", {
   openUrl: (url) => ipcRenderer.invoke("open:url", url),
   copyToClipboard: (text) => ipcRenderer.send("clipboard:write", text),
 
+  // licenses
+
+  checkLicense: () => ipcRenderer.invoke("license:check"),
+  activateLicense: (key) => ipcRenderer.invoke("license:activate", key),
+
+  //updates
+  onUpdateAvailable: (cb) =>
+    ipcRenderer.on("update:available", (_, info) => cb(info)),
+  installUpdate: () => ipcRenderer.send("update:install"),
+
   // Real-time events
   onScreenshotAdded: (cb) =>
     ipcRenderer.on("screenshot:added", (_, data) => cb(data)),
